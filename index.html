@@ -103,10 +103,26 @@
     fullscreenBtn.classList.toggle("hidden", isFullscreen());
   }
 
+  var wakeLockSentinel = null;
+
   function requestWakeLock() {
-    if ("wakeLock" in navigator) {
-      navigator.wakeLock.request("screen").catch(function () {});
+    if (!("wakeLock" in navigator)) {
+      return;
     }
+    navigator.wakeLock
+      .request("screen")
+      .then(function (sentinel) {
+        wakeLockSentinel = sentinel;
+        // El sistema puede liberar el bloqueo por su cuenta (cambio de app,
+        // ahorro de batería, etc.); si la página sigue visible, lo repedimos.
+        sentinel.addEventListener("release", function () {
+          wakeLockSentinel = null;
+          if (document.visibilityState === "visible") {
+            requestWakeLock();
+          }
+        });
+      })
+      .catch(function () {});
   }
 
   fullscreenBtn.addEventListener("click", function () {
@@ -125,6 +141,14 @@
       requestWakeLock();
     }
   });
+
+  // Red de seguridad: si por lo que sea el bloqueo se perdió sin disparar
+  // el evento "release", lo comprobamos y volvemos a pedirlo.
+  setInterval(function () {
+    if (document.visibilityState === "visible" && !wakeLockSentinel) {
+      requestWakeLock();
+    }
+  }, 15000);
 
   updateFullscreenButton();
   requestFullscreen();
