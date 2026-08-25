@@ -66,8 +66,32 @@
     text-align: center;
   }
 
-  #interval-input {
-    width: 8rem;
+  #range-inputs {
+    display: flex;
+    align-items: flex-end;
+    gap: 1rem;
+  }
+
+  .range-field {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .range-field label {
+    font-size: 1rem;
+    color: #bbb;
+  }
+
+  #range-sep {
+    font-size: 2rem;
+    padding-bottom: 0.4em;
+  }
+
+  #min-input,
+  #max-input {
+    width: 6rem;
     padding: 0.5em;
     font-size: 2rem;
     text-align: center;
@@ -137,15 +161,18 @@
     >
   </video>
   <div id="setup-screen">
-    <label for="interval-input">Segundos entre número y número</label>
-    <input
-      id="interval-input"
-      type="number"
-      inputmode="numeric"
-      min="1"
-      step="1"
-      value="20"
-    >
+    <label>Segundos entre número y número (rango aleatorio)</label>
+    <div id="range-inputs">
+      <div class="range-field">
+        <label for="min-input">Desde</label>
+        <input id="min-input" type="number" inputmode="numeric" min="1" step="1" value="5">
+      </div>
+      <span id="range-sep">–</span>
+      <div class="range-field">
+        <label for="max-input">Hasta</label>
+        <input id="max-input" type="number" inputmode="numeric" min="1" step="1" value="15">
+      </div>
+    </div>
     <button id="start-btn" type="button">Iniciar</button>
   </div>
 
@@ -160,7 +187,8 @@
   var display = document.getElementById("number-display");
   var fullscreenBtn = document.getElementById("fullscreen-btn");
   var setupScreen = document.getElementById("setup-screen");
-  var intervalInput = document.getElementById("interval-input");
+  var minInput = document.getElementById("min-input");
+  var maxInput = document.getElementById("max-input");
   var startBtn = document.getElementById("start-btn");
   var statusEl = document.getElementById("status");
   var started = false;
@@ -293,17 +321,34 @@
     }
   }, 15000);
 
+  function scheduleNext(minSeconds, maxSeconds) {
+    var seconds =
+      minSeconds + Math.floor(Math.random() * (maxSeconds - minSeconds + 1));
+    setTimeout(function () {
+      showRandomNumber();
+      scheduleNext(minSeconds, maxSeconds);
+    }, seconds * 1000);
+  }
+
   function startApp() {
     if (started) {
       return;
     }
     started = true;
 
-    var seconds = parseInt(intervalInput.value, 10);
-    if (!(seconds > 0)) {
-      seconds = 20;
+    var minSeconds = parseInt(minInput.value, 10);
+    var maxSeconds = parseInt(maxInput.value, 10);
+    if (!(minSeconds > 0)) {
+      minSeconds = 5;
     }
-    var intervalMs = seconds * 1000;
+    if (!(maxSeconds > 0)) {
+      maxSeconds = 15;
+    }
+    if (maxSeconds < minSeconds) {
+      var swap = minSeconds;
+      minSeconds = maxSeconds;
+      maxSeconds = swap;
+    }
 
     setupScreen.classList.add("hidden");
     display.classList.remove("hidden");
@@ -315,7 +360,7 @@
     keepScreenAwake();
 
     showRandomNumber();
-    setInterval(showRandomNumber, intervalMs);
+    scheduleNext(minSeconds, maxSeconds);
   }
 
   startBtn.addEventListener("click", startApp);
