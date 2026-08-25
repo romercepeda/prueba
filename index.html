@@ -51,6 +51,47 @@
     font-variant-numeric: tabular-nums;
   }
 
+  #setup-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    color: #fff;
+    font-family: "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    padding: 0 6vw;
+  }
+
+  #setup-screen label {
+    font-size: 1.3rem;
+    text-align: center;
+  }
+
+  #interval-input {
+    width: 8rem;
+    padding: 0.5em;
+    font-size: 2rem;
+    text-align: center;
+    color: #fff;
+    background: #000;
+    border: 2px solid #fff;
+    border-radius: 0.4em;
+  }
+
+  #start-btn {
+    padding: 0.8em 2.4em;
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #000;
+    background: #fff;
+    border: 2px solid #fff;
+    border-radius: 0.4em;
+    cursor: pointer;
+  }
+
+  .hidden {
+    display: none !important;
+  }
+
   #fullscreen-btn {
     position: fixed;
     bottom: 5vh;
@@ -63,10 +104,6 @@
     border: 2px solid #fff;
     border-radius: 0.4em;
     cursor: pointer;
-  }
-
-  #fullscreen-btn.hidden {
-    display: none;
   }
 
   #status {
@@ -99,9 +136,22 @@
       type="video/mp4"
     >
   </video>
-  <div id="number-display" aria-live="polite"></div>
-  <button id="fullscreen-btn" type="button">Pantalla completa</button>
-  <div id="status"></div>
+  <div id="setup-screen">
+    <label for="interval-input">Segundos entre número y número</label>
+    <input
+      id="interval-input"
+      type="number"
+      inputmode="numeric"
+      min="1"
+      step="1"
+      value="20"
+    >
+    <button id="start-btn" type="button">Iniciar</button>
+  </div>
+
+  <div id="number-display" class="hidden" aria-live="polite"></div>
+  <button id="fullscreen-btn" type="button" class="hidden">Pantalla completa</button>
+  <div id="status" class="hidden"></div>
 </div>
 <script>
 (function () {
@@ -109,7 +159,11 @@
 
   var display = document.getElementById("number-display");
   var fullscreenBtn = document.getElementById("fullscreen-btn");
-  var INTERVAL_MS = 20000;
+  var setupScreen = document.getElementById("setup-screen");
+  var intervalInput = document.getElementById("interval-input");
+  var startBtn = document.getElementById("start-btn");
+  var statusEl = document.getElementById("status");
+  var started = false;
 
   function showRandomNumber() {
     display.textContent = "";
@@ -140,7 +194,6 @@
     fullscreenBtn.classList.toggle("hidden", isFullscreen());
   }
 
-  var statusEl = document.getElementById("status");
   var keepaliveVideo = document.getElementById("keepalive-video");
   var wakeLockSentinel = null;
 
@@ -227,7 +280,7 @@
   );
 
   document.addEventListener("visibilitychange", function () {
-    if (document.visibilityState === "visible") {
+    if (started && document.visibilityState === "visible") {
       keepScreenAwake();
     }
   });
@@ -235,17 +288,37 @@
   // Red de seguridad: si por lo que sea se perdió el bloqueo sin disparar
   // el evento "release", lo comprobamos y volvemos a intentarlo.
   setInterval(function () {
-    if (document.visibilityState === "visible" && !wakeLockSentinel) {
+    if (started && document.visibilityState === "visible" && !wakeLockSentinel) {
       keepScreenAwake();
     }
   }, 15000);
 
-  updateFullscreenButton();
-  requestFullscreen();
-  keepScreenAwake();
+  function startApp() {
+    if (started) {
+      return;
+    }
+    started = true;
 
-  showRandomNumber();
-  setInterval(showRandomNumber, INTERVAL_MS);
+    var seconds = parseInt(intervalInput.value, 10);
+    if (!(seconds > 0)) {
+      seconds = 20;
+    }
+    var intervalMs = seconds * 1000;
+
+    setupScreen.classList.add("hidden");
+    display.classList.remove("hidden");
+    fullscreenBtn.classList.remove("hidden");
+    statusEl.classList.remove("hidden");
+
+    updateFullscreenButton();
+    requestFullscreen();
+    keepScreenAwake();
+
+    showRandomNumber();
+    setInterval(showRandomNumber, intervalMs);
+  }
+
+  startBtn.addEventListener("click", startApp);
 })();
 </script>
 </body>
